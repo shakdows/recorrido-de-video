@@ -95,7 +95,7 @@ html.idle #hud{opacity:0;pointer-events:none;}
 </section>
 
 <script>
-const INTRO_SECONDS = 5.0;   // 0 = sin intro automática
+const INTRO_SECONDS = 10.0;   // 0 = sin intro automática
 const CHAPTERS = [{"f": 0.0, "chip": "Entrada", "title": "BIENVENIDO", "sub": "Acceso principal con acabados premium"}, {"f": 0.15, "chip": "Cocina", "title": "COCINA", "sub": "Cocina integral totalmente equipada"}, {"f": 0.32, "chip": "Sala", "title": "SALA Y COMEDOR", "sub": "Concepto abierto con luz natural"}, {"f": 0.54, "chip": "Terraza", "title": "TERRAZA", "sub": "Balcon privado con vista"}, {"f": 0.66, "chip": "Pasillo", "title": "PASILLO", "sub": "Distribucion comoda hacia las recamaras"}, {"f": 0.84, "chip": "Recamara", "title": "RECAMARA PRINCIPAL", "sub": "Amplia suite con closet"}];
 
 const html = document.documentElement;
@@ -106,7 +106,9 @@ const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 
 let FRAMES = null, N = 0, DUR = 10, scrollLen = 0, autoScroll = false;
-const FPS = 12, PXPS = 320;
+const FPS = 12;
+const PXPS = 550;             // px de scroll por segundo de video: más alto = recorrido más lento
+const AUTO_SPEED = 0.45; // velocidad del modo Auto (1 = tiempo real del video)
 const IS_MOBILE = Math.min(screen.width, screen.height) < 700;
 
 /* ---------- carga con progreso: elige archivo según dispositivo ---------- */
@@ -264,7 +266,7 @@ function loop(){
     if (f > 0.7) $('intro').classList.add('gone');
     if (f >= 1){ introActive = false; window.scrollTo({top: 0, behavior: 'smooth'}); } // vuelve al inicio para explorar
   } else if (autoScroll){
-    const next = window.scrollY + (1/60)*PXPS;
+    const next = window.scrollY + (1/60)*PXPS*AUTO_SPEED;
     if (next >= scrollLen-1){ window.scrollTo({top:scrollLen}); autoScroll=false; setPlay(); }
     else window.scrollTo({top: next});
   }
