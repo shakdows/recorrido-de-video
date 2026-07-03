@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Recorrido Inmersivo — Vista al Mar</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--gold:#e8b04b;}
+html,body{width:100%;background:#000;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;}
+img{max-width:100%;}
+/* --- contenedor anclado: el video se queda fijo mientras se hace scroll --- */
+#pin{position:relative;}
+#stage{position:sticky;top:0;height:100vh;overflow:hidden;background:#000;}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;}
+/* barras cine */
+.bar{position:absolute;left:0;right:0;height:6.5vh;background:#000;z-index:5;pointer-events:none;}
+#barT{top:0;} #barB{bottom:0;}
+#vig{position:absolute;inset:0;z-index:4;pointer-events:none;background:radial-gradient(ellipse at center,transparent 52%,rgba(0,0,0,.5) 100%);}
+/* fundido de carga */
+#fade{position:absolute;inset:0;background:#000;z-index:30;pointer-events:none;transition:opacity .6s ease;}
+/* marca */
+#brand{position:absolute;top:calc(6.5vh + 20px);left:28px;z-index:10;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.7);}
+#brand .n{font-size:18px;font-weight:800;letter-spacing:4px;}
+#brand .s{font-size:10px;letter-spacing:2px;opacity:.8;text-transform:uppercase;margin-top:3px;}
+#live{position:absolute;top:calc(6.5vh + 20px);right:28px;z-index:10;display:flex;align-items:center;gap:8px;color:#fff;font-size:11px;letter-spacing:2px;text-shadow:0 1px 8px rgba(0,0,0,.8);}
+#live .dot{width:8px;height:8px;border-radius:50%;background:#e53935;animation:bl 1.4s infinite;}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.25}}
+/* hint de scroll */
+#hint{position:absolute;left:0;right:0;bottom:calc(6.5vh + 96px);z-index:10;text-align:center;color:#fff;font-size:12px;letter-spacing:3px;opacity:.92;pointer-events:none;text-shadow:0 2px 10px rgba(0,0,0,.8);transition:opacity .6s;}
+#hint span{display:block;font-size:22px;margin-top:8px;animation:bnc 1.6s infinite;}
+@keyframes bnc{0%,100%{transform:translateY(0)}50%{transform:translateY(9px)}}
+#hint.hide{opacity:0;}
+/* subtítulo de escena */
+#cap{position:absolute;left:0;right:0;bottom:calc(6.5vh + 70px);z-index:10;text-align:center;color:#fff;pointer-events:none;opacity:0;transform:translateY(14px);transition:opacity .8s ease,transform .8s ease;}
+#cap.on{opacity:1;transform:translateY(0);}
+#cap .t{font-size:clamp(24px,3.6vw,44px);font-weight:800;letter-spacing:7px;text-shadow:0 3px 20px rgba(0,0,0,.85);}
+#cap .l{width:60px;height:2px;background:var(--gold);margin:12px auto;}
+#cap .s{font-size:clamp(12px,1.4vw,16px);letter-spacing:1.5px;opacity:.92;text-shadow:0 2px 12px rgba(0,0,0,.9);}
+/* HUD inferior */
+#hud{position:absolute;left:0;right:0;bottom:0;z-index:20;padding:12px 22px calc(6.5vh - 30px);display:flex;flex-direction:column;gap:10px;background:linear-gradient(transparent,rgba(0,0,0,.6));transition:opacity .5s;}
+html.idle #hud{opacity:0;pointer-events:none;}
+#prog{position:relative;height:5px;background:rgba(255,255,255,.24);border-radius:3px;cursor:pointer;}
+#prog .fill{position:absolute;left:0;top:0;bottom:0;background:var(--gold);border-radius:3px;width:0%;}
+#prog .mk{position:absolute;top:-3px;width:11px;height:11px;border-radius:50%;background:#fff;border:2px solid #0009;transform:translateX(-50%);cursor:pointer;}
+#row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.cbtn{background:rgba(255,255,255,.14);backdrop-filter:blur(6px);color:#fff;border:1px solid rgba(255,255,255,.28);border-radius:22px;padding:8px 15px;font-size:12px;cursor:pointer;letter-spacing:.5px;white-space:nowrap;font-weight:600;}
+.cbtn:hover{background:rgba(255,255,255,.3);}
+.chp{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.2);color:#dcdcdc;border-radius:15px;padding:6px 12px;font-size:11px;cursor:pointer;white-space:nowrap;}
+.chp:hover{background:rgba(232,176,75,.4);color:#fff;}
+.chp.on{background:var(--gold);color:#1a1208;font-weight:700;border-color:var(--gold);}
+#tm{color:#fff;font-size:11px;opacity:.85;min-width:82px;text-align:right;margin-left:auto;letter-spacing:1px;}
+/* sección de contacto */
+#after{background:#0b0e13;color:#fff;padding:96px 24px 120px;text-align:center;}
+#after .n{font-size:clamp(28px,4.4vw,44px);font-weight:800;letter-spacing:8px;}
+#after .l{width:74px;height:2px;background:var(--gold);margin:22px auto;}
+#after .s{font-size:16px;letter-spacing:2px;opacity:.88;margin-bottom:12px;}
+#after .c{font-size:13px;opacity:.62;letter-spacing:1px;margin-bottom:34px;line-height:1.8;}
+#after button{background:var(--gold);border:none;color:#1a1208;font-weight:700;font-size:14px;padding:13px 32px;border-radius:28px;cursor:pointer;letter-spacing:1px;}
+#after button:hover{filter:brightness(1.1);}
+#feats{display:flex;gap:26px;justify-content:center;flex-wrap:wrap;margin:0 auto 40px;max-width:640px;}
+#feats div{font-size:12px;letter-spacing:1px;opacity:.8;}
+#feats b{display:block;font-size:22px;color:var(--gold);font-weight:800;margin-bottom:4px;letter-spacing:0;}
+</style>
+</head>
+<body>
+<div id="pin"><div id="stage">
+  <canvas id="cv"></canvas>
+  <div class="bar" id="barT"></div><div class="bar" id="barB"></div>
+  <div id="vig"></div>
+  <div id="brand"><div class="n">VISTA AL MAR</div><div class="s">Recorrido inmersivo · Departamento</div></div>
+  <div id="live"><span class="dot"></span>TOUR</div>
+  <div id="hint">DESLIZA PARA RECORRER<span>↓</span></div>
+  <div id="cap"><div class="t"></div><div class="l"></div><div class="s"></div></div>
+  <div id="hud">
+    <div id="prog"><div class="fill"></div></div>
+    <div id="row">
+      <button class="cbtn" id="bPlay">▶ Reproducir solo</button>
+      <button class="cbtn" id="bRst">↺ Reiniciar</button>
+      <span id="chips"></span>
+      <span id="tm">0:00 / 0:00</span>
+    </div>
+  </div>
+  <div id="fade"></div>
+</div></div>
+<section id="after">
+  <div class="n">VISTA AL MAR</div><div class="l"></div>
+  <div class="s">Tu departamento frente al mar te espera</div>
+  <div id="feats">
+    <div><b>2</b>Recámaras</div>
+    <div><b>1</b>Baño completo</div>
+    <div><b>360°</b>Vista al mar</div>
+    <div><b>Full</b>Cocina equipada</div>
+  </div>
+  <div class="c">Agenda tu visita presencial<br>ventas@vistaalmar.com · +52 55 0000 0000</div>
+  <button id="bAgain">Volver al inicio del recorrido</button>
+</section>
+
+<script src="frames.js"></script>
+<script>
+const html = document.documentElement;
+const $ = id => document.getElementById(id);
+const fill = document.querySelector('#prog .fill');
+const pin = document.getElementById('pin');
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+const N = FRAMES.length;               // número de fotogramas
+const FPS = 12;                        // fps efectivo del recorrido
+const DUR = N / FPS;                   // duración equivalente en segundos
+const PXPS = 320;                      // píxeles de scroll por segundo
+let scrollLen = 0, autoScroll = false;
+
+// leyendas por fracción del recorrido (0..1)
+const CHAPTERS = [
+  {f:0.00, chip:'Entrada',  title:'BIENVENIDO',        sub:'Acceso principal con acabados de madera premium'},
+  {f:0.15, chip:'Cocina',   title:'COCINA',            sub:'Cocina integral en L, totalmente equipada'},
+  {f:0.32, chip:'Sala',     title:'SALA Y COMEDOR',    sub:'Concepto abierto con luz natural y vista al mar'},
+  {f:0.54, chip:'Terraza',  title:'TERRAZA',           sub:'Balcón privado frente al océano'},
+  {f:0.66, chip:'Pasillo',  title:'PASILLO Y BAÑO',    sub:'Distribución cómoda hacia la recámara'},
+  {f:0.84, chip:'Recámara', title:'RECÁMARA PRINCIPAL',sub:'Amplia suite con clóset y TV'},
+];
+
+/* precarga de imágenes */
+const imgs = new Array(N);
+let loaded = 0, imgW = 960, imgH = 540;
+function preload(){
+  for (let i = 0; i < N; i++){
+    const im = new Image();
+    im.onload = () => {
+      if (i === 0){ imgW = im.naturalWidth; imgH = im.naturalHeight; }
+      loaded++;
+      if (loaded === 1){ resize(); draw(0); }        // pinta el primero apenas llega
+      if (loaded >= N){ $('fade').style.opacity = 0; }
+    };
+    im.src = FRAMES[i];
+    imgs[i] = im;
+  }
+}
+
+/* dibuja el fotograma f (índice) cubriendo el canvas (object-fit: cover) */
+let lastDrawn = -1;
+function draw(idx){
+  idx = Math.max(0, Math.min(N - 1, Math.round(idx)));
+  const im = imgs[idx];
+  if (!im || !im.complete || !im.naturalWidth) return;
+  lastDrawn = idx;
+  const cw = cv.width, ch = cv.height;
+  const s = Math.max(cw / imgW, ch / imgH);
+  const w = imgW * s, h = imgH * s;
+  ctx.drawImage(im, (cw - w) / 2, (ch - h) / 2, w, h);
+}
+
+function layout(){
+  scrollLen = DUR * PXPS;
+  pin.style.height = (scrollLen + innerHeight) + 'px';
+}
+function resize(){
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  cv.width = Math.round(innerWidth * dpr);
+  cv.height = Math.round(innerHeight * dpr);
+  const f = scrollLen ? window.scrollY / scrollLen : 0;
+  layout();
+  draw(Math.max(0, Math.min(1, f)) * (N - 1));
+}
+
+function fmt(s){ s = Math.max(0, Math.round(s)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; }
+
+function buildChips(){
+  CHAPTERS.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'chp'; b.textContent = c.chip;
+    b.onclick = () => scrollToFrac(c.f + 0.005);
+    $('chips').appendChild(b); c.btn = b;
+    const m = document.createElement('div'); m.className = 'mk';
+    m.style.left = (c.f * 100) + '%'; m.title = c.chip;
+    $('prog').appendChild(m);
+  });
+}
+
+function scrollToFrac(f){
+  autoScroll = false; $('bPlay').textContent = '▶ Reproducir solo';
+  window.scrollTo({top: Math.max(0, Math.min(1, f)) * scrollLen, behavior:'smooth'});
+}
+
+let curChapter = -1;
+function updateCaption(frac){
+  let ci = 0;
+  for (let i = 0; i < CHAPTERS.length; i++) if (frac >= CHAPTERS[i].f - 0.005) ci = i;
+  if (ci !== curChapter){
+    curChapter = ci;
+    const c = CHAPTERS[ci], cap = $('cap');
+    cap.classList.remove('on');
+    setTimeout(() => {
+      cap.querySelector('.t').textContent = c.title;
+      cap.querySelector('.s').textContent = c.sub;
+      cap.classList.add('on');
+    }, 70);
+    CHAPTERS.forEach(x => x.btn.classList.toggle('on', x === c));
+  }
+}
+
+/* controles */
+$('bPlay').onclick = () => {
+  autoScroll = !autoScroll;
+  if (autoScroll && window.scrollY >= scrollLen - 2) window.scrollTo({top:0});
+  $('bPlay').textContent = autoScroll ? '⏸ Pausar' : '▶ Reproducir solo';
+};
+$('bRst').onclick = () => scrollToFrac(0);
+$('bAgain').onclick = () => scrollToFrac(0);
+$('prog').addEventListener('pointerdown', e => {
+  const r = $('prog').getBoundingClientRect();
+  scrollToFrac((e.clientX - r.left) / r.width);
+});
+['wheel','touchstart','keydown'].forEach(ev =>
+  addEventListener(ev, () => { if (autoScroll){ autoScroll = false; $('bPlay').textContent = '▶ Reproducir solo'; } }, {passive:true}));
+
+/* auto-ocultar HUD y hint */
+let idleT, scrolled = false;
+function poke(){ html.classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => html.classList.add('idle'), 3400); }
+addEventListener('pointermove', poke); addEventListener('pointerdown', poke); poke();
+addEventListener('scroll', () => { if (!scrolled && window.scrollY > 20){ scrolled = true; $('hint').classList.add('hide'); } }, {passive:true});
+
+/* bucle: mapea scroll → fotograma, con suavizado */
+let target = 0, cur = 0;
+function loop(){
+  requestAnimationFrame(loop);
+  if (autoScroll){
+    const next = window.scrollY + (1/60) * PXPS;
+    if (next >= scrollLen - 1){ window.scrollTo({top: scrollLen}); autoScroll = false; $('bPlay').textContent = '▶ Reproducir solo'; }
+    else window.scrollTo({top: next});
+  }
+  const frac = scrollLen ? Math.max(0, Math.min(1, window.scrollY / scrollLen)) : 0;
+  target = frac * (N - 1);
+  cur += (target - cur) * 0.22;                       // suavizado del scrubbing
+  if (Math.abs(target - cur) < 0.02) cur = target;
+  const idx = Math.round(cur);
+  if (idx !== lastDrawn) draw(idx);
+  fill.style.width = (frac * 100) + '%';
+  $('tm').textContent = fmt(frac * DUR) + ' / ' + fmt(DUR);
+  updateCaption(frac);
+}
+
+addEventListener('resize', resize);
+buildChips();
+preload();
+resize();
+loop();
+</script>
+</body>
+</html>
