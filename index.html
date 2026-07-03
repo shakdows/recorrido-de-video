@@ -19,12 +19,6 @@ html,body{width:100%;background:#000;font-family:'Segoe UI',system-ui,-apple-sys
 #fade .ld{color:#fff;font-size:12px;letter-spacing:3px;opacity:.75;}
 #fade .lbar{width:min(240px,60vw);height:3px;background:rgba(255,255,255,.18);border-radius:2px;overflow:hidden;}
 #fade .lbar i{display:block;height:100%;width:0%;background:var(--gold);transition:width .2s;}
-/* intro cinematográfica */
-#intro{position:absolute;inset:0;z-index:28;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;background:rgba(0,0,0,.28);transition:opacity 1s ease;padding:0 18px;}
-#intro.gone{opacity:0;}
-#intro .kn{font-size:clamp(26px,7vw,58px);font-weight:800;letter-spacing:8px;text-shadow:0 4px 24px rgba(0,0,0,.8);}
-#intro .kl{width:80px;height:2px;background:var(--gold);margin:20px auto;}
-#intro .ks{font-size:clamp(11px,2.6vw,17px);letter-spacing:3px;opacity:.9;text-shadow:0 2px 12px rgba(0,0,0,.9);}
 #brand{position:absolute;top:calc(6.5vh + 16px);left:20px;z-index:10;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.7);}
 #brand .n{font-size:clamp(14px,2.4vw,18px);font-weight:800;letter-spacing:4px;}
 #brand .s{font-size:clamp(8px,1.4vw,10px);letter-spacing:2px;opacity:.8;text-transform:uppercase;margin-top:3px;}
@@ -70,9 +64,8 @@ html.idle #hud{opacity:0;pointer-events:none;}
   <canvas id="cv"></canvas>
   <div class="bar" id="barT"></div><div class="bar" id="barB"></div>
   <div id="vig"></div>
-  <div id="brand"><div class="n">VISTA AL MAR</div><div class="s">Recorrido inmersivo · Departamento</div></div>
+  <div id="brand"><div class="n">VISTA AL MAR</div><div class="s">Departamento frente al mar</div></div>
   <div id="live"><span class="dot"></span>TOUR</div>
-  <div id="intro"><div class="kn">VISTA AL MAR</div><div class="kl"></div><div class="ks">Recorrido inmersivo del departamento</div></div>
   <div id="hint">DESLIZA PARA RECORRER<span>↓</span></div>
   <div id="cap"><div class="t"></div><div class="l"></div><div class="s"></div></div>
   <div id="hud">
@@ -113,12 +106,19 @@ const IS_MOBILE = Math.min(screen.width, screen.height) < 700;
 
 /* ---------- carga con progreso: elige archivo según dispositivo ---------- */
 (async function loadFrames(){
-  const src = IS_MOBILE ? 'frames-mobile.js' : 'frames.js';
+  // en celular intenta las variantes ligeras (con y sin guión); si no existen, usa la completa
+  const candidates = IS_MOBILE ? ['frames-mobile.js', 'framesmobile.js', 'frames.js'] : ['frames.js'];
   const ld = document.querySelector('#fade .ld');
   const lb = document.querySelector('#fade .lbar i');
+  let src = candidates[0];
   try {
-    const res = await fetch(src);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    let res = null;
+    for (const cand of candidates){
+      try { res = await fetch(cand); } catch(e){ res = null; }
+      if (res && res.ok){ src = cand; break; }
+      res = null;
+    }
+    if (!res) throw new Error('sin archivo de frames');
     const total = +res.headers.get('Content-Length') || 0;
     let text;
     if (res.body && res.body.getReader){
@@ -145,18 +145,6 @@ const IS_MOBILE = Math.min(screen.width, screen.height) < 700;
     N = FRAMES.length; DUR = N / FPS;
     startTour();
   } catch(e){
-    // respaldo: quizá el archivo está embebido o solo existe frames.js
-    if (IS_MOBILE){
-      try {
-        const res2 = await fetch('frames.js');
-        if (res2.ok){
-          (new Function((await res2.text()) + ';window.__FRAMES = FRAMES;'))();
-          FRAMES = window.__FRAMES; delete window.__FRAMES;
-          N = FRAMES.length; DUR = N / FPS;
-          return startTour();
-        }
-      } catch(e2){}
-    }
     ld.textContent = 'No se pudo cargar el recorrido (' + src + ')';
   }
 })();
@@ -224,7 +212,6 @@ function scrollToFrac(f){ stopIntro(); autoScroll = false; setPlay(); window.scr
 let curChapter = -1;
 function updateCaption(frac){
   if (!CHAPTERS.length || !CHAPTERS[0].btn) return;
-  if (introActive){ $('cap').classList.remove('on'); curChapter = -1; return; }
   let ci = 0; for (let i=0;i<CHAPTERS.length;i++) if (frac >= CHAPTERS[i].f-0.005) ci=i;
   if (ci !== curChapter){
     curChapter = ci; const c = CHAPTERS[ci], cap = $('cap'); cap.classList.remove('on');
@@ -252,8 +239,7 @@ addEventListener('scroll', () => { if (!scrolled && window.scrollY>20){ scrolled
 /* intro: auto-avanza el recorrido los primeros segundos, luego cede al scroll */
 let introActive = false, introT0 = 0;
 function startIntro(){ introActive = true; introT0 = performance.now(); }
-function stopIntro(){ if (introActive){ introActive=false; $('intro').classList.add('gone'); } }
-if (INTRO_SECONDS <= 0) $('intro').style.display = 'none';
+function stopIntro(){ introActive = false; }
 
 let target = 0, cur = 0;
 function loop(){
@@ -263,7 +249,6 @@ function loop(){
     const el = (performance.now() - introT0) / 1000;
     const f = Math.min(1, el / INTRO_SECONDS);
     window.scrollTo({top: f * scrollLen});
-    if (f > 0.7) $('intro').classList.add('gone');
     if (f >= 1){ introActive = false; window.scrollTo({top: 0, behavior: 'smooth'}); } // vuelve al inicio para explorar
   } else if (autoScroll){
     const next = window.scrollY + (1/60)*PXPS*AUTO_SPEED;
